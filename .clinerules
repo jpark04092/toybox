@@ -1,0 +1,17 @@
+# Cline Always-Reference Pointer
+
+Before starting any task in this repository, always refer to the agent documentation under `.agent/`.
+
+Required first read:
+- `.agent/README.md`
+
+Then choose the relevant detailed references as needed:
+- `.agent/PROJECT_OVERVIEW.md` — project architecture, naming rules, tech stack, core flows
+- `.agent/FILE_STRUCTURE_MAP.md` — file/directory navigation and modification checklist
+- `.agent/DATA_FLOW_DIAGRAMS.md` — feature/data flow diagrams and impact analysis
+- `.agent/QUICK_REFERENCE.md` — practical implementation patterns, common mistakes, test checklist
+
+Operational rule:
+- Treat `.agent/README.md` as the index for project context.
+- Use `.agent/*` documentation before making code changes, unless the task is unrelated to this project.
+- If code changes alter architecture, file structure, data flow, or reusable patterns, update the relevant `.agent/` document as part of the same task.
