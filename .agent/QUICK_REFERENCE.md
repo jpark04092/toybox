@@ -35,10 +35,12 @@
 - **UI**: `ui/HomeScreen.kt` 또는 BusCard Composable (알림 설정 UI)
 
 ### 알림 자동 활성화(Auto-Enable) 기능 수정 시
-- **Receiver**: `notify/AutoEnableReceiver.kt` (AlarmManager 및 요일 체크 로직)
+- **Schedule Helper**: `domain/model/AutoEnableSchedule.kt` (요일 bitmask 규칙 및 선택 요일 기반 다음 실행 시각 계산)
+- **Worker**: `notify/AutoEnableWorker.kt` (WorkManager 자동 활성화 실행 및 재예약)
+- **Receiver**: `notify/AutoEnableReceiver.kt` (부팅 후 자동 활성 스케줄 복구)
 - **Worker**: `notify/AutoDisableWorker.kt` (매일 23:59:30 알람 일괄 해제 로직)
 - **Repository**: `data/CardRepository.kt` (setAutoEnable)
-- **ViewModel**: `ui/MainViewModel.kt` (setAutoEnable 호출 및 Receiver 예약 제어)
+- **ViewModel**: `ui/MainViewModel.kt` (setAutoEnable 호출 및 Worker 예약 제어)
 - **UI**: `ui/HomeScreen.kt` (AutoEnableSetupDialog 및 설정 아이콘)
 
 ### 데이터베이스 스키마 수정 시

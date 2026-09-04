@@ -68,6 +68,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jpark.alarmcard.domain.model.BusCard
 import com.jpark.alarmcard.domain.model.Card as DomainCard
+import com.jpark.alarmcard.domain.model.AutoEnableSchedule
 import com.jpark.alarmcard.domain.model.FxCard
 import com.jpark.alarmcard.domain.model.StockCard
 import sh.calvin.reorderable.ReorderableItem
@@ -714,10 +715,16 @@ fun AutoEnableSetupDialog(
 ) {
     var enabled by remember { mutableStateOf(card.autoEnabled) }
     var selectedDays by remember { mutableStateOf(card.autoEnableDays) }
-    val initialTime = card.autoEnableTime?.split(":") ?: listOf("08", "00")
+    val initialTime = card.autoEnableTime
+        ?.split(":")
+        ?.takeIf { it.size == 2 }
+        ?.mapNotNull { it.toIntOrNull() }
+        ?.takeIf { it.size == 2 && it[0] in 0..23 && it[1] in 0..59 }
+        ?: listOf(8, 0)
+    val canConfirm = !enabled || AutoEnableSchedule.hasSelectedDay(selectedDays)
     val timePickerState = rememberTimePickerState(
-        initialHour = initialTime[0].toInt(),
-        initialMinute = initialTime[1].toInt()
+        initialHour = initialTime[0],
+        initialMinute = initialTime[1]
     )
 
     AlertDialog(
@@ -767,6 +774,14 @@ fun AutoEnableSetupDialog(
                         }
                     }
                 }
+                if (enabled && !AutoEnableSchedule.hasSelectedDay(selectedDays)) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "자동 활성화를 사용하려면 요일을 하나 이상 선택하세요.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
 
                 Spacer(Modifier.height(16.dp))
                 Text("활성화 시각", style = MaterialTheme.typography.labelMedium)
@@ -787,10 +802,13 @@ fun AutoEnableSetupDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                val timeStr = String.format("%02d:%02d", timePickerState.hour, timePickerState.minute)
-                onConfirm(enabled, selectedDays, timeStr)
-            }) { Text("확인") }
+            TextButton(
+                enabled = canConfirm,
+                onClick = {
+                    val timeStr = String.format("%02d:%02d", timePickerState.hour, timePickerState.minute)
+                    onConfirm(enabled, selectedDays, timeStr)
+                }
+            ) { Text("확인") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("취소") }

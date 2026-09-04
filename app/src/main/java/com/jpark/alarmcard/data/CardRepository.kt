@@ -11,11 +11,13 @@ import com.jpark.alarmcard.domain.model.BusCard
 import com.jpark.alarmcard.domain.model.Card
 import com.jpark.alarmcard.domain.model.FxCard
 import com.jpark.alarmcard.domain.model.StockCard
+import com.jpark.alarmcard.domain.model.AutoEnableSchedule
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import timber.log.Timber
+import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -109,10 +111,17 @@ class CardRepository @Inject constructor(
 
     suspend fun setAutoEnable(id: String, enabled: Boolean, days: Int, time: String?) {
         val card = dao.getById(id)?.toDomain() ?: return
+        val sanitizedDays = days and AutoEnableSchedule.VALID_DAYS_MASK
+        val sanitizedTime = time?.split(":")
+            ?.takeIf { it.size == 2 }
+            ?.mapNotNull { it.toIntOrNull() }
+            ?.takeIf { it.size == 2 && it[0] in 0..23 && it[1] in 0..59 }
+            ?.let { String.format(Locale.US, "%02d:%02d", it[0], it[1]) }
+        val finalEnabled = enabled && AutoEnableSchedule.hasSelectedDay(sanitizedDays) && sanitizedTime != null
         val updated = when (card) {
-            is StockCard -> card.copy(autoEnabled = enabled, autoEnableDays = days, autoEnableTime = time)
-            is BusCard -> card.copy(autoEnabled = enabled, autoEnableDays = days, autoEnableTime = time)
-            is FxCard -> card.copy(autoEnabled = enabled, autoEnableDays = days, autoEnableTime = time)
+            is StockCard -> card.copy(autoEnabled = finalEnabled, autoEnableDays = sanitizedDays, autoEnableTime = sanitizedTime)
+            is BusCard -> card.copy(autoEnabled = finalEnabled, autoEnableDays = sanitizedDays, autoEnableTime = sanitizedTime)
+            is FxCard -> card.copy(autoEnabled = finalEnabled, autoEnableDays = sanitizedDays, autoEnableTime = sanitizedTime)
         }
         dao.upsert(updated.toEntity())
     }

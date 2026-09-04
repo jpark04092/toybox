@@ -5,6 +5,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.*
 import com.jpark.alarmcard.data.CardRepository
 import com.jpark.alarmcard.data.local.CardEntity
+import com.jpark.alarmcard.domain.model.AutoEnableSchedule
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.util.*
@@ -33,13 +34,7 @@ class AutoEnableWorker @AssistedInject constructor(
         if (!entity.autoEnabled) return
 
         val now = Calendar.getInstance()
-        val dayOfWeek = now.get(Calendar.DAY_OF_WEEK)
-        // Calendar.SUNDAY = 1, MONDAY = 2, ..., SATURDAY = 7
-        // UI(HomeScreen.kt)의 1-based bitmask:
-        // 월(index 0)=1<<1(2), 화(index 1)=1<<2(4), ..., 토(index 5)=1<<6(64), 일(index 6)=1<<7(128)
-        val dayBit = if (dayOfWeek == Calendar.SUNDAY) (1 shl 7) else (1 shl (dayOfWeek - 1))
-
-        if ((entity.autoEnableDays and dayBit) != 0) {
+        if (AutoEnableSchedule.isSelected(now.get(Calendar.DAY_OF_WEEK), entity.autoEnableDays)) {
             if (entity.type == CardEntity.TYPE_BUS) {
                 repository.setBusAlarm(cardId, true, entity.alarmMinutesBefore)
                 BusAlarmWorker.scheduleNext(applicationContext, 5L)
@@ -65,18 +60,14 @@ class AutoEnableWorker @AssistedInject constructor(
             val hour = parts[0].toIntOrNull() ?: return
             val minute = parts[1].toIntOrNull() ?: return
 
-            val now = Calendar.getInstance()
-            val calendar = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, hour)
-                set(Calendar.MINUTE, minute)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-                if (!after(now)) {
-                    add(Calendar.DATE, 1)
-                }
-            }
+            val nextRunAt = AutoEnableSchedule.nextRunTimeMillis(
+                nowMillis = System.currentTimeMillis(),
+                hour = hour,
+                minute = minute,
+                daysMask = entity.autoEnableDays
+            ) ?: return
 
-            val delayMs = (calendar.timeInMillis - System.currentTimeMillis()).coerceAtLeast(0L)
+            val delayMs = (nextRunAt - System.currentTimeMillis()).coerceAtLeast(0L)
             
             val data = workDataOf(EXTRA_CARD_ID to entity.id)
             val request = OneTimeWorkRequestBuilder<AutoEnableWorker>()

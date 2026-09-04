@@ -33,7 +33,8 @@ app/src/main/java/com/jpark/alarmcard/
 ├── AlarmCardApp.kt                    # @HiltAndroidApp 진입점
 ├── domain/
 │   └── model/
-│       └── Card.kt                    # sealed interface: StockCard, BusCard, FxCard
+│       ├── Card.kt                    # sealed interface: StockCard, BusCard, FxCard
+│       └── AutoEnableSchedule.kt      # 자동 활성화 요일 bitmask 및 다음 실행 시각 계산
 ├── data/
 │   ├── local/
 │   │   ├── AppDatabase.kt             # Room Database
@@ -54,7 +55,7 @@ app/src/main/java/com/jpark/alarmcard/
 ├── notify/
 │   ├── BusAlarmWorker.kt              # WorkManager 기반 버스 알림 Worker
 │   ├── StockAlarmWorker.kt            # WorkManager 기반 주식 알림 Worker
-│   ├── AutoEnableWorker.kt            # WorkManager 기반 알림 자동 활성화 Worker
+│   ├── AutoEnableWorker.kt            # WorkManager 기반 알림 자동 활성화 Worker (선택 요일 기반 예약)
 │   ├── AutoEnableReceiver.kt          # 부팅 시 알림 자동 활성 스케줄 복구 Receiver
 │   ├── NotificationHelper.kt          # 채널 설정 및 알림 발송 유틸
 │   └── AlarmDismissReceiver.kt        # 알림창에서 알림 해제 처리 (버스/주식 공통)
@@ -221,9 +222,9 @@ NotificationHelper.notifyStockAlarm() 발송
   ↓
 MainViewModel.setAutoEnable(id, enabled, days, time)
   ↓
-CardRepository.setAutoEnable() → DB 저장
+CardRepository.setAutoEnable() → DB 저장 (요일/시각 유효성 보정)
   ↓
-AutoEnableWorker.scheduleNext() → WorkManager 등록 (OneTimeWorkRequest + InitialDelay)
+AutoEnableWorker.scheduleNext() → 선택된 다음 요일/시각으로 WorkManager 등록 (OneTimeWorkRequest + InitialDelay)
   ↓
 지정된 시각에 AutoEnableWorker.doWork() 실행
   ├─ 현재 요일 체크
