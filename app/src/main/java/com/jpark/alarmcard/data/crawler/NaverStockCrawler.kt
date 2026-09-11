@@ -151,7 +151,7 @@ class NaverStockCrawler @Inject constructor() {
 
     private fun parseNextData(html: String, symbol: String): StockQuote? {
         val root = NextData.extract(html) ?: return null
-        val stockObj = findStockObject(root) ?: return null
+        val stockObj = findStockObject(root, symbol) ?: return null
 
         val price = stockObj.doubleOrNull("closePrice")
             ?: stockObj.doubleOrNull("nowPrice")
@@ -172,9 +172,11 @@ class NaverStockCrawler @Inject constructor() {
         return StockQuote(symbol, name, price, change, rate, currency)
     }
 
-    private fun findStockObject(root: JsonElement): JsonObject? {
+    private fun findStockObject(root: JsonElement, symbol: String): JsonObject? {
         val stack = ArrayDeque<JsonElement>()
         stack.addLast(root)
+        var firstStockObject: JsonObject? = null
+        var firstMatchedStockObject: JsonObject? = null
         while (stack.isNotEmpty()) {
             val cur = stack.removeLast()
             if (cur is JsonObject) {
@@ -186,22 +188,38 @@ class NaverStockCrawler @Inject constructor() {
                     (keys.contains("itemCode") && (keys.contains("closePrice") || keys.contains("nowPrice")))
                 
                 if (looksLikeStock) {
-                    return cur
+                    if (cur.matchesSymbol(symbol)) {
+                        if (cur.hasStockName()) return cur
+                        if (firstMatchedStockObject == null) firstMatchedStockObject = cur
+                    }
+                    if (firstStockObject == null) firstStockObject = cur
                 }
                 cur.values.forEach { stack.addLast(it) }
             } else if (cur is kotlinx.serialization.json.JsonArray) {
                 cur.forEach { stack.addLast(it) }
             }
         }
-        return null
+
+        // 국내 종목 페이지에는 업종 비교/인기 종목 등 여러 종목 객체가 함께 들어온다.
+        // 요청 코드와 일치하지 않는 첫 번째 객체를 반환하면 다른 종목(예: 이오테크닉스)이 표시될 수 있으므로
+        // 국내 6자리 코드에서는 반드시 일치 객체만 허용한다.
+        return firstMatchedStockObject ?: firstStockObject.takeUnless { symbol.matches(Regex("^\\d{6}$")) }
     }
 
     private fun parseMobileCssFallback(html: String, code: String): StockQuote? {
         val doc = Jsoup.parse(html)
+        if (code.matches(Regex("^\\d{6}$"))) {
+            val ogUrl = doc.selectFirst("meta[property=og:url]")?.attr("content").orEmpty()
+            if (!ogUrl.contains("/domestic/stock/$code/")) return null
+        }
         val priceText = doc.select("strong[class*=price]").firstOrNull()?.text()
             ?: doc.select("[class*=PriceTable]").firstOrNull()?.text()
         val price = priceText?.replace(",", "")?.toDoubleOrNull() ?: return null
-        val name = doc.selectFirst("meta[property=og:title]")?.attr("content") ?: code
+        val name = doc.selectFirst("meta[property=og:title]")?.attr("content")
+            ?.substringBefore(" - ")
+            ?.ifBlank { null }
+            ?: code
+        if (code.matches(Regex("^\\d{6}$")) && name == "Npay 증권") return null
         return StockQuote(code, name, price, null, null, "KRW")
     }
 
@@ -246,3 +264,16 @@ private fun JsonObject.strOrNull(key: String): String? =
 
 private fun JsonObject.doubleOrNull(key: String): Double? =
     this[key]?.let { runCatching { it.jsonPrimitive.content.replace(",", "").toDouble() }.getOrNull() }
+
+private fun JsonObject.hasStockName(): Boolean =
+    strOrNull("stockName") != null || strOrNull("name") != null
+
+private fun JsonObject.matchesSymbol(symbol: String): Boolean {
+    val normalizedSymbol = symbol.uppercase()
+    return listOf("itemCode", "reutersCode", "symbol", "code", "id")
+        .mapNotNull { strOrNull(it)?.uppercase() }
+        .any { candidate ->
+            candidate == normalizedSymbol ||
+                candidate.substringBefore('.').takeIf { it.length == 6 } == normalizedSymbol
+        }
+}
