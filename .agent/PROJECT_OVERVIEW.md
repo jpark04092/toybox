@@ -281,6 +281,10 @@ Card (sealed interface)
 - **시세 조회**: `v8/finance/chart` 엔드포인트를 사용하여 실시간 가격 및 등락 정보를 가져옵니다. (기존 `v1/quote` 404 문제 해결)
 - **종목 검색**: `v1/finance/search` 엔드포인트를 사용하며, 한글 검색 시 400 에러를 방지하기 위해 쿼리 인코딩 및 종목코드 기반 Fallback 로직이 적용되어 있습니다. 한국 주식의 경우 검색어(한글)를 종목명으로 우선 매핑합니다.
 
+#### NaverStockCrawler
+- 네이버 증권 모바일/PC 페이지를 사용하여 국내 주식과 국내 지수 시세를 조회합니다.
+- 모바일 `__NEXT_DATA__`는 등락폭/등락률을 절대값으로 제공하고 상승/하락 방향을 `compareToPreviousPrice` 또는 `fluctuationsType`에 별도로 제공하므로, 파싱 시 `change`와 `changeRate`에 부호를 보정해 저장합니다.
+
 #### AlarmDismissReceiver
 - 알림의 '알람 끄기' 액션 클릭 시 트리거됩니다.
 - 해당 카드의 `alarmEnabled`를 `false`로 변경하여 이후 알림을 중단합니다.

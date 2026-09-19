@@ -125,6 +125,7 @@ AndroidSystem
     │   ├─ NaverStockCrawler.fetchQuote(symbol, market)
     │   │   ├─ OkHttp GET 요청
     │   │   ├─ __NEXT_DATA__ JSON 파싱 (요청 종목코드와 일치하는 객체 우선)
+    │   │   ├─ 네이버 등락 방향 필드(compareToPreviousPrice/fluctuationsType)를 이용해 change/changeRate 부호 보정
     │   │   └─ Fallback: Jsoup CSS 셀렉터
     │   │       └─ StockQuote { name, price, change, changeRate, currency }
     │   └─ card.copy(price, change, changeRate, updatedAt=now, lastError=null)

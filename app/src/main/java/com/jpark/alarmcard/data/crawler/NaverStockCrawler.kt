@@ -157,11 +157,12 @@ class NaverStockCrawler @Inject constructor() {
             ?: stockObj.doubleOrNull("nowPrice")
             ?: stockObj.doubleOrNull("currentPrice")
             ?: stockObj.doubleOrNull("price")
-        val change = stockObj.doubleOrNull("compareToPreviousClosePrice")
-            ?: stockObj.doubleOrNull("compareToPreviousPrice")
-            ?: stockObj.doubleOrNull("change")
-        val rate = stockObj.doubleOrNull("fluctuationsRatio")
-            ?: stockObj.doubleOrNull("changeRate")
+        val directionSign = stockObj.directionSign()
+        val change = (stockObj.doubleOrNull("compareToPreviousClosePrice")
+            ?: stockObj.doubleOrNull("fluctuations")
+            ?: stockObj.doubleOrNull("change"))?.withDirection(directionSign)
+        val rate = (stockObj.doubleOrNull("fluctuationsRatio")
+            ?: stockObj.doubleOrNull("changeRate"))?.withDirection(directionSign)
         val name = stockObj.strOrNull("stockName")
             ?: stockObj.strOrNull("name")
             ?: stockObj.strOrNull("itemCode")
@@ -264,6 +265,38 @@ private fun JsonObject.strOrNull(key: String): String? =
 
 private fun JsonObject.doubleOrNull(key: String): Double? =
     this[key]?.let { runCatching { it.jsonPrimitive.content.replace(",", "").toDouble() }.getOrNull() }
+
+private fun Double.withDirection(directionSign: Double?): Double = when (directionSign) {
+    null -> this
+    0.0 -> 0.0
+    else -> kotlin.math.abs(this) * directionSign
+}
+
+private fun JsonObject.directionSign(): Double? {
+    val compareToPreviousPrice = this["compareToPreviousPrice"] as? JsonObject
+    return listOfNotNull(
+        strOrNull("fluctuationsType"),
+        strOrNull("changeType"),
+        strOrNull("compareToPreviousClosePriceCode"),
+        strOrNull("compareToPreviousPriceCode"),
+        compareToPreviousPrice?.strOrNull("name"),
+        compareToPreviousPrice?.strOrNull("text"),
+        compareToPreviousPrice?.strOrNull("code")
+    ).firstNotNullOfOrNull { it.toDirectionSignOrNull() }
+}
+
+private fun String.toDirectionSignOrNull(): Double? {
+    val normalized = trim().uppercase()
+    return when {
+        normalized in listOf("1", "2", "RISING", "RISE", "UP", "UPPER_LIMIT") -> 1.0
+        normalized in listOf("4", "5", "FALLING", "FALL", "DOWN", "LOWER_LIMIT") -> -1.0
+        normalized in listOf("0", "3", "UNCHANGED", "STEADY", "EVEN") -> 0.0
+        normalized.contains("상승") || normalized.contains("상한") -> 1.0
+        normalized.contains("하락") || normalized.contains("하한") -> -1.0
+        normalized.contains("보합") -> 0.0
+        else -> null
+    }
+}
 
 private fun JsonObject.hasStockName(): Boolean =
     strOrNull("stockName") != null || strOrNull("name") != null

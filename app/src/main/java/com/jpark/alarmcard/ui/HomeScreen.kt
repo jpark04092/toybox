@@ -558,10 +558,12 @@ private fun StockBodyCompact(c: StockCard) {
             color = MaterialTheme.colorScheme.onSurface
         )
         Spacer(Modifier.size(8.dp))
-        val chgColor = c.change?.let { if (it >= 0) Color(0xFFD32F2F) else Color(0xFF1976D2) } ?: MaterialTheme.colorScheme.outline
+        val directionValue = c.change ?: c.changeRate
+        val chgColor = directionValue?.let { if (it >= 0) Color(0xFFD32F2F) else Color(0xFF1976D2) } ?: MaterialTheme.colorScheme.outline
         Text(
             text = buildString {
                 if (c.change != null) append((if (c.change >= 0) "▲" else "▼") + " " + fmtPrice(kotlin.math.abs(c.change), c.currency))
+                else if (c.changeRate != null) append(if (c.changeRate >= 0) "▲" else "▼")
                 if (c.changeRate != null) append("  " + String.format("%.2f%%", c.changeRate))
                 if (c.change == null && c.changeRate == null) append("변동")
             },
