@@ -16,7 +16,7 @@ import com.jpark.alarmcard.domain.model.BusCard
 import com.jpark.alarmcard.domain.model.Card
 import com.jpark.alarmcard.domain.model.FxCard
 import com.jpark.alarmcard.domain.model.StockCard
-import com.jpark.alarmcard.notify.AutoEnableReceiver
+import com.jpark.alarmcard.notify.AutoEnableWorker
 import com.jpark.alarmcard.notify.BusAlarmWorker
 import com.jpark.alarmcard.notify.StockAlarmWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -71,6 +71,7 @@ class MainViewModel @Inject constructor(
 
     fun deleteCard(id: String) = viewModelScope.launch {
         repo.remove(id)
+        AutoEnableWorker.cancel(getApplication(), id)
         rescheduleBusAlarmWorker()
         rescheduleStockAlarmWorker()
     }
@@ -90,6 +91,7 @@ class MainViewModel @Inject constructor(
         }
         if (!json.isNullOrBlank()) {
             repo.importFromJson(json)
+            rescheduleAutoEnableWorkers()
             rescheduleBusAlarmWorker()
             rescheduleStockAlarmWorker()
             refresh()
@@ -111,9 +113,9 @@ class MainViewModel @Inject constructor(
         repo.setAutoEnable(id, enabled, days, time)
         val entity = repo.getCardById(id) ?: return@launch
         if (entity.autoEnabled) {
-            com.jpark.alarmcard.notify.AutoEnableWorker.scheduleNext(getApplication(), entity)
+            AutoEnableWorker.scheduleNext(getApplication(), entity)
         } else {
-            com.jpark.alarmcard.notify.AutoEnableWorker.cancel(getApplication(), id)
+            AutoEnableWorker.cancel(getApplication(), id)
         }
     }
 
@@ -137,6 +139,13 @@ class MainViewModel @Inject constructor(
             BusAlarmWorker.scheduleNext(ctx, delaySec = 5)
         } else {
             BusAlarmWorker.cancel(ctx)
+        }
+    }
+
+    private suspend fun rescheduleAutoEnableWorkers() {
+        val ctx = getApplication<Application>()
+        repo.getAutoEnabledCards().forEach { entity ->
+            AutoEnableWorker.scheduleNext(ctx, entity)
         }
     }
 

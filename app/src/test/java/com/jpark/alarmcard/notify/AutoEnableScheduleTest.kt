@@ -41,6 +41,20 @@ class AutoEnableScheduleTest {
     }
 
     @Test
+    fun nextRunTimeMillis_whenTuesdaySelectedAndTimeIsFuture_returnsTuesday() {
+        val now = millis("2026-09-08 07:50") // Tuesday
+        val next = AutoEnableSchedule.nextRunTimeMillis(
+            nowMillis = now,
+            hour = 8,
+            minute = 0,
+            daysMask = AutoEnableSchedule.TUESDAY_BIT,
+            timeZone = timeZone
+        )
+
+        assertEquals("2026-09-08 08:00", text(next))
+    }
+
+    @Test
     fun nextRunTimeMillis_whenTodaySelectedButTimePassed_returnsNextSelectedWeekday() {
         val now = millis("2026-09-07 08:01") // Monday
         val next = AutoEnableSchedule.nextRunTimeMillis(
@@ -52,6 +66,20 @@ class AutoEnableScheduleTest {
         )
 
         assertEquals("2026-09-14 08:00", text(next))
+    }
+
+    @Test
+    fun nextRunTimeMillis_whenMondayPassedAndMondayTuesdaySelected_returnsTuesday() {
+        val now = millis("2026-09-07 08:01") // Monday
+        val next = AutoEnableSchedule.nextRunTimeMillis(
+            nowMillis = now,
+            hour = 8,
+            minute = 0,
+            daysMask = AutoEnableSchedule.MONDAY_BIT or AutoEnableSchedule.TUESDAY_BIT,
+            timeZone = timeZone
+        )
+
+        assertEquals("2026-09-08 08:00", text(next))
     }
 
     @Test

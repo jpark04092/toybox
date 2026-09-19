@@ -5,6 +5,7 @@ import com.jpark.alarmcard.data.crawler.NaverMapBusCrawler
 import com.jpark.alarmcard.data.crawler.NaverStockCrawler
 import com.jpark.alarmcard.data.crawler.YahooFinanceCrawler
 import com.jpark.alarmcard.data.local.CardDao
+import com.jpark.alarmcard.data.local.CardEntity
 import com.jpark.alarmcard.data.local.toDomain
 import com.jpark.alarmcard.data.local.toEntity
 import com.jpark.alarmcard.domain.model.BusCard
@@ -61,6 +62,9 @@ class CardRepository @Inject constructor(
     suspend fun remove(id: String) = dao.deleteById(id)
 
     suspend fun getCardById(id: String) = dao.getById(id)
+
+    suspend fun getAutoEnabledCards(): List<CardEntity> =
+        dao.getAll().filter { it.autoEnabled }
 
     /** 버스카드 알람 설정 갱신 */
     suspend fun setBusAlarm(id: String, enabled: Boolean, minutesBefore: Int) {
