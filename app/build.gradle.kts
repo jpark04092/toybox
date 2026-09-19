@@ -7,6 +7,20 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+fun String.toPositiveVersionCodeOrNull(): Int? =
+    toIntOrNull()?.takeIf { it > 0 }
+
+val alarmCardVersionCode: Int =
+    (findProperty("ALARM_CARD_VERSION_CODE") as? String)?.toPositiveVersionCodeOrNull()
+        ?: System.getenv("ALARM_CARD_VERSION_CODE")?.toPositiveVersionCodeOrNull()
+        ?: System.getenv("GITHUB_RUN_NUMBER")?.toPositiveVersionCodeOrNull()
+        ?: 1
+
+val alarmCardVersionName: String =
+    (findProperty("ALARM_CARD_VERSION_NAME") as? String)?.takeIf { it.isNotBlank() }
+        ?: System.getenv("ALARM_CARD_VERSION_NAME")?.takeIf { it.isNotBlank() }
+        ?: "0.1.0"
+
 android {
     namespace = "com.jpark.alarmcard"
     compileSdk = 34
@@ -15,10 +29,22 @@ android {
         applicationId = "com.jpark.alarmcard"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = alarmCardVersionCode
+        versionName = alarmCardVersionName
 
         vectorDrawables { useSupportLibrary = true }
+    }
+
+    signingConfigs {
+        getByName("debug") {
+            // CI runner마다 달라지는 기본 ~/.android/debug.keystore 대신
+            // 저장소에 포함된 고정 개발용 keystore를 사용한다.
+            // 이 APK는 개인 배포용 debug 빌드이며 Play Store 배포용 release 키가 아니다.
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
@@ -32,6 +58,7 @@ android {
         debug {
             isDebuggable = true
             applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 

@@ -50,6 +50,8 @@ https://github.com/jpark0409/alarmcard/releases/latest/download/alarmcard-debug.
 ```
 
 - 안드로이드 “출처를 알 수 없는 앱 설치 허용” 이 필요할 수 있습니다.
+- `latest` APK는 저장소에 포함된 고정 개발용 debug keystore로 서명됩니다. 따라서 앞으로 같은 링크에서 받은 APK는 기존 앱을 삭제하지 않고 업데이트 설치할 수 있습니다.
+- 과거에 다른 서명키로 빌드된 APK가 이미 설치되어 있다면 Android 보안 정책상 최초 1회는 삭제 후 재설치가 필요합니다. 그 이후부터는 동일 서명으로 업데이트됩니다.
 - 처음 push 후 첫 릴리즈가 만들어지기까지 5분 정도 걸립니다 (`Release APK` 워크플로우).
 - 특정 버전을 배포하고 싶으면 `git tag v1.0.0 && git push --tags` 형태로 태그를 push 하세요. 해당 태그의 정식 릴리즈도 생성됩니다.
 
@@ -79,6 +81,12 @@ https://github.com/jpark0409/alarmcard/releases/latest/download/alarmcard-debug.
 gradle wrapper --gradle-version 8.9 --distribution-type bin   # 최초 1회
 ./gradlew :app:assembleDebug
 # 산출물: app/build/outputs/apk/debug/app-debug.apk
+```
+
+로컬/CI debug APK는 `app/debug.keystore`를 사용해 서명이 고정됩니다. CI에서는 `GITHUB_RUN_NUMBER`를 `versionCode`로 사용하므로 새 빌드가 기존 설치본보다 낮은 버전으로 간주되는 문제를 줄입니다. 필요하면 수동으로 아래처럼 지정할 수 있습니다.
+
+```bash
+./gradlew :app:assembleDebug -PALARM_CARD_VERSION_CODE=123 -PALARM_CARD_VERSION_NAME=0.1.0
 ```
 
 Windows에서는 `gradlew.bat` 을 사용하세요.

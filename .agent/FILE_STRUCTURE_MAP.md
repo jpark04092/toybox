@@ -218,6 +218,7 @@ res/
 |------|------|
 | `.gitignore` | Git 무시 목록 |
 | `README.md` | 프로젝트 설명서 |
+| `app/debug.keystore` | CI/로컬 debug APK 업데이트 설치를 위한 고정 개발용 서명키 |
 | `PUSH_TO_GITHUB.md` | 배포 가이드 |
 | `gradle.properties` | Gradle 속성 |
 | `settings.gradle.kts` | 멀티 모듈 설정 |

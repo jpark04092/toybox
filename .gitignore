@@ -35,6 +35,7 @@ captures/
 # Keystore
 *.jks
 *.keystore
+!/app/debug.keystore
 
 # Kotlin
 .kotlin/
